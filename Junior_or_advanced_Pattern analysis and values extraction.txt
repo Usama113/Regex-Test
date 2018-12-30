@@ -1,0 +1,159 @@
+Pattern analysis and values extraction
+=====================================
+
+Tags: python
+
+Value matching
+--------------
+
+Create a function that will return python regex pattern or list of patterns for given string values. Function must be able to return list of patters with different scores based on how excact the patten is. Also function must be able to handle outlier values. Please, see exampes for explanation.
+Function must take parametes that can change result patterns or scores. 
+
+### Examples
+
+In examples I will this function signature: 
+
+    foo(list[str]) -> list[tuple[str,int]]
+
+Result here is list of tuples with regex pattern and it's confidence score. The more "uncertain" the pattern is, the lower is score.
+
+#### Number values pattern
+
+Pattern for list where all values are numbers
+
+    foo([
+        "123456",
+        "654321",
+        "101010",
+        "999999",
+        ...
+    ]) -> [
+        (r'^\d{6}$', 100),
+        (r'^\d{5,7}$', 50),
+        (r'^\w{5,7}$', 30),
+    ]
+
+Now let's have we have a lot of similar values, but we also have some different values (outliers).
+
+    foo([
+        "123456",
+        "6543211",
+        "101010",
+        "9999993",
+        ...lots of other numbers with 5-6 digits
+        "A-103111/2",
+        ...other values
+    ]) -> [
+        (r'^\d{5,6}$', 100),
+        (r'^\d{4,7}$', 70),
+        (r'^\w{4,7}$', 30),
+    ]
+
+Here we have one value that have different format from other values, and we assume that this is an outlier and don't use it for creating patterns.
+
+#### Date values patterns
+
+    foo([
+        "2018-01-11",
+        "2019-10-10",
+        "1991-10-13",
+        "2000-01-10",
+        "2019-10-10",
+        ...
+    ]) -> [
+        (r'^\d{4}-\d{2}-\d{2}$', 100),
+        ...
+    ]
+
+#### Names patterns
+
+    foo([
+        "FIRSNAME/Lastname",
+        "JOHN/Doe",
+        ...
+    ]) -> [
+        (r'^[A-Z]{4,8}/[A-Za-z]{3,8}$', 100),
+        (r'^[A-Z]{2,}/[A-Za-z]{2,}$', 80),
+        (r'^\w+/\w+$', 80),
+        ...
+    ]
+
+#### Some ID values
+
+    foo([
+        "A-1012331/1",
+        "A-1231141/2",
+        "A-1231141/1",
+        "A-1233441/2",
+        "A-1231321/3",
+        "B-1231141/11",
+        ...
+    ]) -> [
+        (r'^[AB]-\d{8}/\d{1,2}$', 100),
+        (r'^[A-Z]-\d{8}/\d{1,2}$', 85),
+        (r'^[A-Z]-\d+/\d+$', 30),
+        ...
+    ]
+
+Values extraction
+-----------------
+
+Next improvement would be using this function for data extraction. In this case function signature will look like this: 
+
+    foo(list[tuple[str,str]]) -> list[tuple[str,int]]
+
+Here the parameter is list of tuples with input and output values [(VAL_IN, VAL_OUT), ...]. The resuld un this cause also must be list of regexes, but the regexes not must contain capturing groups that we can use to extract the data that we need.
+This will be useful for cases, when output value is part of input value:
+
+    foo([
+        ("A-1012331/1", "1012331"),
+        ("A-1231141/2", "1231141"),
+        ("A-1231141/1", "1231141"),
+        ("A-1233441/2", "1233441"),
+        ("A-1231321/3", "1231321"),
+        ("B-1231141/11", "1231141"),
+        ...
+    ]) -> [
+        (r'^[AB]-(\d{8})/\d{1,2}$', 100),
+        (r'^[A-Z]-(\d{8})/\d{1,2}$', 85),
+        (r'^[A-Z]-(\d+)/\d+$', 30),
+        ...
+    ]
+
+Not in the result we have patters with exactly one capturing group.
+
+Values correction
+-----------------
+
+This is improvement to value extraction when input and output values are not eactly equal. Right now I don't have detailed explanation for this part. Only idea what it need to do.
+Function parameters here can look like this:
+
+    [
+        ("A-1012331/1", "1012331-1"),
+        ("A-1231141/2", "1231141-2"),
+        ("A-1231141/1", "1231141-1"),
+        ("A-1233441/2", "1233441-3"),
+        ("A-1231321/3", "1231321-3"),
+        ("B-1231141/11", "1231141-11"),
+        ...
+    ]
+
+Example for names:
+
+    [
+        ("FIRSNAME/Lastname", "LASTNAME"),
+        ("JOHN/Doe", "DOE"),
+        ...
+    ]
+
+Example for some other IDs set:
+
+    [
+        ("1012331", "A012331"),
+        ("1231141", "A231141"),
+        ("1231141", "A231141"),
+        ("1233441", "A233441"),
+        ("1231321", "A231321"),
+        ("1231141", "A231141"),
+        ...
+    ]
